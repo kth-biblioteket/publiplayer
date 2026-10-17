@@ -202,7 +202,7 @@
     }
     if (!first && key === this.currentKey) return;
     // Från svart skärm eller en sida som inte gick att ladda: den nya listan börjar direkt (inget att visa bakom)
-    var direct = first || this.currentKey === 'off' || this.currentKey === 'empty' || this.frames[this.active].hasFailed();
+    var direct = first || this.black || this.frames[this.active].hasFailed();
     this.currentKey = key;
     this.generation++;
     this.cancel('preload');
@@ -215,7 +215,6 @@
     // Svart skärm (schemat säger off, eller listan är tom): sidorna släpps och inget visas
     if (c.black || !shown.length) {
       this.black = true;
-      this.currentKey = c.black ? 'off' : 'empty';
       this.frames.forEach(function (f) { f.clear(); });
       this.ui.error(false, false);
       this.ui.black(true);
