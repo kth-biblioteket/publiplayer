@@ -13,6 +13,42 @@ html, body {
   cursor: none;
 }
 
+/* Allt ritas på scenen. ORIENTATION (90, 180, 270) vrider hela scenen så att en skärm som sitter stående eller upp och
+   ned visar bilden rätt när skärmens egen vridning inte används. Vid 90 och 270 byter bredd och höjd plats. */
+#stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+html.rot90 {
+  font-size: 2.2vw;
+}
+
+html.rot270 {
+  font-size: 2.2vw;
+}
+
+html.rot90 #stage {
+  width: 100vh;
+  height: 100vw;
+  transform-origin: top left;
+  transform: translateX(100vw) rotate(90deg);
+}
+
+html.rot180 #stage {
+  transform: rotate(180deg);
+}
+
+html.rot270 #stage {
+  width: 100vh;
+  height: 100vw;
+  transform-origin: top left;
+  transform: translateY(100vh) rotate(-90deg);
+}
+
 /* Båda ramarna är alltid synliga (annars stryps skripten); den aktiva ligger överst (z-index sätts av rotator.js) */
 #frames.hidden {
   display: none;

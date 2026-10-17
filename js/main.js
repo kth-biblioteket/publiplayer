@@ -28,9 +28,17 @@
     return v === true || /^(true|1|yes|on)$/i.test(String(v).trim());
   }
 
+  /** ORIENTATION: vrider hela scenen (90, 180 eller 270 grader medurs), annars som skärmen visar */
+  function applyOrientation(value) {
+    var v = String(value || '').trim();
+    var turn = /^(90|180|270)$/.test(v) ? v : '';
+    document.documentElement.className = turn ? 'rot' + turn : '';
+  }
+
   /** Inställningarna { values, version } tillämpas; rotationen startas om bara om något som syns ändrats */
   function apply(config) {
     var values = config.values || {};
+    applyOrientation(values.ORIENTATION);
     var seconds = intValue(values, 'SIGN_SECONDS', 30, schedule.MIN_S, schedule.MAX_S);
     var scripts = boolValue(values, 'SIGN_JS', true);
     var pagesRaw = String(values.SIGN_PAGES || '').trim();

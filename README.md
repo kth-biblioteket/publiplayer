@@ -9,6 +9,7 @@ Klienten för Samsung Tizen-skyltskärmar (Tizen 4.0 och nyare) som styrs från 
 - **Rotation:** två iframes med förladdning (10 s före bytet, byte först när nästa sida ritat klart), felsida utan knappar (ny laddning efter 30 s, 10 s vid nätfel, trasig sida lämnas efter 10 s om listan har fler), svart skärm vid `off` eller tom lista. Samma regler som `SignageScreen.java` och `signage-run.js`.
 - **Schema:** `js/schedule.js` är en port av `SignSchedule.java` (dagar, klockslag, datum, perioder, `off`).
 - **Felupptäckt:** sidan kontrolleras med `fetch` (HEAD) innan den visas. Sidovagnens bildsidor (`…/api/sign/s/<id>`) svarar med CORS: 503 = ingen bild finns (sidan hoppas över), 404 = okänt id. Andra sidor utan CORS prövas med `no-cors` (nätverksfel eller ej) och godkänns på `onload`.
+- **Stående eller liggande:** klienten fyller skärmens verkliga storlek. Står skärmen stående eller upp och ned och skärmens egen bildvridning inte används, vrider `ORIENTATION` (0, 90, 180, 270 grader medurs) hela scenen (sidor, felsida och inskrivning) med CSS. Storleken på en "sida som bild" i admin anges som den ser ut efter vridningen (1080×1920 för en stående skärm). Provat i webbläsare för 90°; 180° och 270° och själva Tizen-skärmen är inte provade.
 - **Status:** `POST /api/heartbeat` med `platform: "tizen"` var `HEARTBEAT_INTERVAL` minut. Svaret `reload` hämtar inställningarna igen.
 
 `SIGN_RESOURCES` finns inte i katalogen: en iframe kan inte begränsa vilka adresser sidans skript hämtar från.
