@@ -1,0 +1,42 @@
+# PubLiPlayer
+
+Klienten för Samsung Tizen-skyltskärmar (Tizen 4.0 och nyare) som styrs från publicomtools, som Linux-kiosken (publicom) och Android-appen (publikiosk). Bara skylt: skärmen skrivs in med en engångskod, hämtar inställningar och schema, visar sidorna i spellistan och rapporterar status. Omstart och skärmdump finns inte (kräver Samsungs partnercertifikat).
+
+## Vad den gör
+
+- **Inskrivning:** adress till publicomtools + engångskod från admin (Lägg till dator → Tizen-skärmar → Skapa inskrivningskod). `POST /api/device/enroll` ger token. Tokens och senaste inställningar sparas i lokal lagring.
+- **Inställningar:** `GET /api/device/config?format=json&host=…` (`SIGN_SCHEDULE`, `SIGN_PAGES`, `SIGN_SECONDS`, `SIGN_JS`, `COMPUTER_NAME`, `HEARTBEAT_INTERVAL`). Katalogen för admin ligger i `config/catalog.json`. Utan nät vid start används de senaste inställningarna.
+- **Rotation:** två iframes med förladdning (10 s före bytet, byte först när nästa sida ritat klart), felsida utan knappar (ny laddning efter 30 s, 10 s vid nätfel, trasig sida lämnas efter 10 s om listan har fler), svart skärm vid `off` eller tom lista. Samma regler som `SignageScreen.java` och `signage-run.js`.
+- **Schema:** `js/schedule.js` är en port av `SignSchedule.java` (dagar, klockslag, datum, perioder, `off`).
+- **Felupptäckt:** sidan kontrolleras med `fetch` (HEAD) innan den visas. Sidovagnens bildsidor (`…/api/sign/s/<id>`) svarar med CORS: 503 = ingen bild finns (sidan hoppas över), 404 = okänt id. Andra sidor utan CORS prövas med `no-cors` (nätverksfel eller ej) och godkänns på `onload`.
+- **Status:** `POST /api/heartbeat` med `platform: "tizen"` var `HEARTBEAT_INTERVAL` minut. Svaret `reload` hämtar inställningarna igen.
+
+`SIGN_RESOURCES` finns inte i katalogen: en iframe kan inte begränsa vilka adresser sidans skript hämtar från.
+
+## Körs som
+
+- **Hostad sida:** `index.html` med `css/` och `js/` på en https-adress; skärmens URL Launcher pekar på den. Fungerar utan paket.
+- **Paket:** `sh build/pack.sh` ger `dist/PubLiPlayer.wgt` och `dist/sssp_config.xml` (version och storlek) för *Install Web App*. `.wgt` är osignerad; om skärmen kräver signering måste den signeras med Tizen Studio. Format på `sssp_config.xml` och om skärmen godtar en osignerad `.wgt` är **inte provat**.
+
+Koden är skriven för Chromium 56 (Tizen 4.0): vanliga skript, ingen bundler, inga moduler, ingen `async`/`await`.
+
+## Prova
+
+```
+node tests/schedule.test.js        # schemalogiken
+python3 -m http.server 8000        # klienten i en vanlig webbläsare, http://127.0.0.1:8000
+```
+
+I webbläsaren går http bara mot localhost för adressen till publicomtools; annars krävs https.
+
+## Filer
+
+| Fil | Innehåll |
+|---|---|
+| `index.html`, `css/player.css` | två iframes, felsida, inskrivning |
+| `js/schedule.js` | SIGN_PAGES och SIGN_SCHEDULE (ren logik, provas i Node) |
+| `js/client.js`, `js/store.js` | protokollet mot publicomtools, lokal lagring |
+| `js/rotator.js` | rotation, förladdning, felsida, felupptäckt |
+| `js/ui.js`, `js/main.js` | vyer; start, inställningar och statusrapport |
+| `config.xml`, `build/pack.sh` | Tizen-widget och paketering |
+| `config/catalog.json` | nycklarna som admin visar för Tizen-skärmar |
