@@ -27,7 +27,7 @@
       fetches++;
       return Promise.resolve({ version: fakeVersion, values: { SIGN_PAGES: JSON.stringify([{ url: pages[fakeVersion], s: 30 }]) } });
     };
-    PP.client.heartbeat = function (s) { heartbeats.push(s.configVersion || ''); return Promise.resolve({ ok: true }); };
+    PP.client.heartbeat = function (s) { heartbeats.push((s.configVersion || '') + ':' + s.pageLoaded); return Promise.resolve({ ok: true }); };
     try { localStorage.removeItem('publiplayer.config'); } catch (e) {}
   </script>
   <script src="../js/rotator.js"></script>
@@ -39,12 +39,12 @@
     setTimeout(function () { log.push('t=1s  fetches=' + fetches + ' hb=' + heartbeats.join(',') + ' src=' + src().join(' ')); }, 1000);
     setTimeout(function () { log.push('t=4.5s (oförändrad version) fetches=' + fetches + ' hb=' + heartbeats.join(',')); fakeVersion = 'v2'; }, 4500);
     setTimeout(function () {
-      log.push('t=8s  (efter ändring) fetches=' + fetches + ' hb=' + heartbeats.join(',') + ' src=' + src().join(' '));
-      var ok = src().join(' ').indexOf('example.org') >= 0 && heartbeats.join(',') === 'v1,v2' && fetches >= 5;
+      log.push('t=10s (efter ändring) fetches=' + fetches + ' hb=' + heartbeats.join(',') + ' src=' + src().join(' '));
+      var ok = src().join(' ').indexOf('example.org') >= 0 && heartbeats[0] === 'v1:false' && heartbeats.indexOf('v1:true') > 0 && heartbeats.indexOf('v2:true') > 0 && fetches >= 5;
       log.push(ok ? 'RESULTAT: OK' : 'RESULTAT: FEL');
       document.getElementById('result').textContent = log.join('\n');
       document.title = ok ? 'poll OK' : 'poll FEL';
-    }, 8000);
+    }, 10000);
   </script>
 </body>
 </html>
