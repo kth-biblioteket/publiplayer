@@ -89,7 +89,9 @@
       if (token !== self.token) return;
       dbg('kontroll ' + result + ' ' + tail(url));
       if (result === 'http' || result === 'net') return self.fail(result === 'net');
-      self.el.setAttribute('sandbox', scripts ? 'allow-scripts allow-same-origin' : 'allow-same-origin');
+      // ?nosandbox (felsökning): ingen sandbox alls, för att se om den hindrar videon
+      if (window.PP_debug && /[?&]nosandbox/.test(window.location.search)) self.el.removeAttribute('sandbox');
+      else self.el.setAttribute('sandbox', scripts ? 'allow-scripts allow-same-origin' : 'allow-same-origin');
       self.el.src = url;
       self.timer = setTimeout(function () {
         if (token === self.token) self.fail(false);
