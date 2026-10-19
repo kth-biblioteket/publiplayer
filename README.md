@@ -19,6 +19,8 @@ Klienten för Samsung Tizen-skyltskärmar (Tizen 4.0 och nyare) som styrs från 
 - **Hostad sida:** `index.html` med `css/` och `js/` på en https-adress; skärmens URL Launcher pekar på den. Fungerar utan paket.
 - **Paket:** `sh build/pack.sh` ger `dist/PubLiPlayer.wgt` och `dist/sssp_config.xml` (version och storlek) för *Install Web App*. `.wgt` är osignerad; om skärmen kräver signering måste den signeras med Tizen Studio. Format på `sssp_config.xml` och om skärmen godtar en osignerad `.wgt` är **inte provat**.
 
+**Versionen** (`VERSION` i `js/main.js` och `version` i `config.xml`) höjs vid varje ändring av spelaren. Den syns som Spelare i admin och visar vilken version skärmen faktiskt kör.
+
 Koden är skriven för Chromium 56 (Tizen 4.0): vanliga skript, ingen bundler, inga moduler, ingen `async`/`await`.
 
 ## Prova
