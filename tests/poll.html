@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>poll test</title>
+  <link rel="stylesheet" href="../css/player.css">
+</head>
+<body>
+  <!-- Prov av omhämtningen av inställningar med en låtsasserver: öppna http://127.0.0.1:8000/tests/poll.html (python3 -m http.server 8000 i repot) -->
+  <div id="stage">
+    <div id="frames" class="hidden"><iframe id="frame-a" src="about:blank"></iframe><iframe id="frame-b" src="about:blank"></iframe></div>
+    <div id="error" class="overlay hidden"><p id="error-sv"></p><p id="error-en"></p></div>
+    <div id="enroll" class="overlay hidden"><form id="enroll-form"><input id="enroll-url"><input id="enroll-code"><button></button><p id="enroll-msg"></p></form></div>
+  </div>
+  <pre id="result" style="position:fixed;bottom:0;left:0;z-index:99;color:#0f0;background:#000"></pre>
+  <script>window.PP = { configPollMs: 1500 };</script>
+  <script src="../js/schedule.js"></script>
+  <script src="../js/store.js"></script>
+  <script src="../js/client.js"></script>
+  <script>
+    // Låtsasklient: enheten är inskriven och servern byter config efter ett tag
+    var fakeVersion = 'v1', fetches = 0, heartbeats = [];
+    var pages = { v1: 'https://example.com/', v2: 'https://example.org/' };
+    PP.client.isEnrolled = function () { return true; };
+    PP.client.host = function () { return 'test'; };
+    PP.client.fetchConfig = function () {
+      fetches++;
+      return Promise.resolve({ version: fakeVersion, values: { SIGN_PAGES: JSON.stringify([{ url: pages[fakeVersion], s: 30 }]) } });
+    };
+    PP.client.heartbeat = function (s) { heartbeats.push(s.configVersion || ''); return Promise.resolve({ ok: true }); };
+    try { localStorage.removeItem('publiplayer.config'); } catch (e) {}
+  </script>
+  <script src="../js/rotator.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    function src() { return [].map.call(document.querySelectorAll('iframe'), function (f) { return f.getAttribute('src'); }); }
+    var log = [];
+    setTimeout(function () { log.push('t=1s  fetches=' + fetches + ' hb=' + heartbeats.join(',') + ' src=' + src().join(' ')); }, 1000);
+    setTimeout(function () { log.push('t=4.5s (oförändrad version) fetches=' + fetches + ' hb=' + heartbeats.join(',')); fakeVersion = 'v2'; }, 4500);
+    setTimeout(function () {
+      log.push('t=8s  (efter ändring) fetches=' + fetches + ' hb=' + heartbeats.join(',') + ' src=' + src().join(' '));
+      var ok = src().join(' ').indexOf('example.org') >= 0 && heartbeats.join(',') === 'v1,v2' && fetches >= 5;
+      log.push(ok ? 'RESULTAT: OK' : 'RESULTAT: FEL');
+      document.getElementById('result').textContent = log.join('\n');
+      document.title = ok ? 'poll OK' : 'poll FEL';
+    }, 8000);
+  </script>
+</body>
+</html>

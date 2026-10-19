@@ -5,7 +5,7 @@ Klienten för Samsung Tizen-skyltskärmar (Tizen 4.0 och nyare) som styrs från 
 ## Vad den gör
 
 - **Inskrivning:** adress till publicomtools + engångskod från admin (Lägg till dator → Tizen-skärmar → Skapa inskrivningskod). `POST /api/device/enroll` ger token. Tokens och senaste inställningar sparas i lokal lagring.
-- **Inställningar:** `GET /api/device/config?format=json&host=…` (`SIGN_SCHEDULE`, `SIGN_PAGES`, `SIGN_SECONDS`, `SIGN_JS`, `COMPUTER_NAME`, `HEARTBEAT_INTERVAL`). Katalogen för admin ligger i `config/catalog.json`. Utan nät vid start används de senaste inställningarna.
+- **Inställningar:** hämtas vid start och sedan en gång per minut (`CONFIG_POLL_MS` i `js/main.js`); en ändrad spellista slår igenom av sig själv, utan reload eller omstart. En oförändrad version gör ingenting, och en ny version rapporteras direkt i en statusrapport. `GET /api/device/config?format=json&host=…` (`SIGN_SCHEDULE`, `SIGN_PAGES`, `SIGN_SECONDS`, `SIGN_JS`, `COMPUTER_NAME`, `HEARTBEAT_INTERVAL`). Katalogen för admin ligger i `config/catalog.json`. Utan nät vid start används de senaste inställningarna.
 - **Rotation:** två iframes med förladdning (10 s före bytet, byte först när nästa sida ritat klart), felsida utan knappar (ny laddning efter 30 s, 10 s vid nätfel, trasig sida lämnas efter 10 s om listan har fler), svart skärm vid `off` eller tom lista. Samma regler som `SignageScreen.java` och `signage-run.js`.
 - **Schema:** `js/schedule.js` är en port av `SignSchedule.java` (dagar, klockslag, datum, perioder, `off`).
 - **Felupptäckt:** sidan kontrolleras med `fetch` (HEAD) innan den visas. Sidovagnens bildsidor (`…/api/sign/s/<id>`) svarar med CORS: 503 = ingen bild finns (sidan hoppas över), 404 = okänt id. Andra sidor utan CORS prövas med `no-cors` (nätverksfel eller ej) och godkänns på `onload`.
@@ -25,6 +25,7 @@ Koden är skriven för Chromium 56 (Tizen 4.0): vanliga skript, ingen bundler, i
 
 ```
 node tests/schedule.test.js        # schemalogiken
+# tests/poll.html (via servern nedan, http://127.0.0.1:8000/tests/poll.html): omhämtningen av inställningar med en låtsasserver; titeln blir "poll OK"
 python3 -m http.server 8000        # klienten i en vanlig webbläsare, http://127.0.0.1:8000
 ```
 
