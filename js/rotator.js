@@ -84,6 +84,7 @@
     this.reset();
     this.url = url;
     this.loading = true;
+    this.playTried = false;
     probe(url).then(function (result) {
       if (token !== self.token) return;
       dbg('kontroll ' + result + ' ' + tail(url));
@@ -106,6 +107,13 @@
       try {
         var v = self.el.contentDocument && self.el.contentDocument.querySelector('video');
         if (!v) { if (tries === 1) dbg('video: ingen <video> i sidan (eller annan origin)'); return; }
+        if (!self.playTried) {
+          // Eget play() bara i felsökningsläget: NotAllowedError = autoplay-policy, NotSupportedError = format
+          self.playTried = true;
+          var p = v.play();
+          if (p && p.then) p.then(function () { dbg('play(): ok'); }, function (e) { dbg('play(): ' + e.name + ' ' + e.message); });
+          else dbg('play(): anropat (inget löfte)');
+        }
         var state = 'video: ' + (v.paused ? 'pausad' : 'spelar') + ' ready=' + v.readyState + ' network=' + v.networkState
           + ' ' + v.videoWidth + 'x' + v.videoHeight + ' t=' + Math.round(v.currentTime * 10) / 10 + (v.muted ? ' muted' : '')
           + (v.error ? ' FEL=' + v.error.code : '') + (v.src ? ' src=' + tail(v.currentSrc || v.src) : '');
