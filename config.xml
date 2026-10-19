@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://lib.kth.se/publiplayer" version="0.1.2" viewmodes="maximized">
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://lib.kth.se/publiplayer" version="0.1.3" viewmodes="maximized">
   <tizen:application id="PubLiPlay0.PubLiPlayer" package="PubLiPlay0" required_version="4.0"/>
   <content src="index.html"/>
+  <icon src="icon.png"/>
   <name>PubLiPlayer</name>
   <feature name="http://tizen.org/feature/screen.size.all"/>
   <tizen:privilege name="http://tizen.org/privilege/internet"/>
   <tizen:setting screen-orientation="auto-rotation" context-menu="disable" background-support="disable" encryption="disable" install-location="auto"/>
   <access origin="*" subdomains="true"/>
+  <tizen:metadata key="http://tizen.org/metadata/app_ui_type/base_screen_resolution" value="fullscreen"/>
+  <tizen:profile name="tv-samsung"/>
 </widget>
