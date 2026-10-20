@@ -37,6 +37,12 @@ Skärmens *Install Web App* (URL Launcher) hämtar `sssp_config.xml` och `PubLiP
 ## 5. Signera paketet
 **Med Tizen Studio:** File → Import → *Tizen → Tizen Project* → välj mappen `dist/stage` efter ett bygge utan signering, eller repots rot. Högerklicka projektet → **Build Signed Package**. Då skapas `PubLiPlayer.wgt`.
 
+**Utan Tizen Studio (provat mot Samsungs egna signerade paket):** `build/tizen_sign.py` signerar med bara Python och `openssl`. Använd mappen med certifikaten som Certificate Manager gjorde (med `author.p12` och `distributor.p12`):
+```
+PUBLICOM_URL=https://apps-ref.lib.kth.se/publicomtools SIGN_CERT_DIR=~/SamsungCertificate/PubLiPlaye sh build/pack.sh
+```
+Skriptet frågar efter lösenorden till de två `.p12`-filerna i terminalen (de visas inte och sparas inte) och kontrollerar sedan paketet (`python3 build/tizen_sign.py verify dist/PubLiPlayer.wgt`). Formatet är verifierat genom att kontrollera att skriptet godkänner ett paket som Samsung signerat; att din skärm godtar signaturen är inte provat.
+
 **Med kommandoraden (oprovat, (?)):**
 ```
 PUBLICOM_URL=https://apps-ref.lib.kth.se/publicomtools SIGN_PROFILE=publiplayer sh build/pack.sh

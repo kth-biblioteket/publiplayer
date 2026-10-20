@@ -2,7 +2,8 @@
 # Packar klienten som dist/PubLiPlayer.wgt (zip) och skriver dist/sssp_config.xml med version och storlek i byte.
 # PUBLICOM_URL=https://värd/publicomtools sh build/pack.sh skriver in adressen som standard för inskrivningen i paketet
 # (en installerad .wgt har ingen värd att utgå från, så utan den föreslås apps.lib.kth.se).
-# SIGN_PROFILE=<certifikatprofil> sh build/pack.sh signerar paketet med Tizen-kommandoraden (docs/signering.md).
+# SIGN_CERT_DIR=<mapp med author.p12 och distributor.p12> sh build/pack.sh signerar paketet med build/tizen_sign.py (frågar efter lösenorden).
+# SIGN_PROFILE=<certifikatprofil> sh build/pack.sh signerar i stället med Tizen-kommandoraden (kräver Tizen Studio, oprovat).
 # OBS: utan SIGN_PROFILE är .wgt:n osignerad. Om skärmen kräver signering (Tizen Studio-certifikat) signeras den separat; se README.
 set -eu
 
@@ -25,7 +26,11 @@ window.PP_DEFAULT_URL = '$PUBLICOM_URL';
 EOF
 fi
 
-if [ -n "${SIGN_PROFILE:-}" ]; then
+if [ -n "${SIGN_CERT_DIR:-}" ]; then
+  # Signerat paket med build/tizen_sign.py (bara Python och openssl). Lösenorden till author.p12 och distributor.p12 frågas
+  # efter i terminalen. SIGN_CERT_DIR är mappen med certifikaten (t ex ~/SamsungCertificate/PubLiPlaye).
+  python3 -I build/tizen_sign.py sign dist/stage dist/PubLiPlayer.wgt "$SIGN_CERT_DIR"
+elif [ -n "${SIGN_PROFILE:-}" ]; then
   # Signerat paket med Tizen-kommandoraden (kräver Tizen Studio och en certifikatprofil, se docs/signering.md). Oprovat.
   command -v tizen >/dev/null || { echo "tizen hittas inte i PATH (Tizen Studio: tools/ide/bin)" >&2; exit 1; }
   tizen package -t wgt -s "$SIGN_PROFILE" -o dist/signed -- dist/stage
