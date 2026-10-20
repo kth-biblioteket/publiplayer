@@ -71,3 +71,29 @@ Kontrollera att `<size>` i `sssp_config.xml` är exakt filens storlek i byte (`w
 - Samsung Developer Forum: *Install Tizen .wgt using URL Launcher*, *Wgt Distribution – Tizen 7 Cert Problem*, *New certificates needed?*
 - Tizen: *Application Signing and Certificates* (docs.tizen.org/application/web/tutorials/sign-certificate)
 - signageOS: debugguide för Samsung Tizen (developer mode via URL Launcher Settings)
+
+## Resultat av proven på skärmen QH55R (Tizen 4.0, signage), 20 oktober 2026
+
+Det här är vad som provades och vad det visade. Slutsatserna om orsaken är **inte bevisade**.
+
+**Skärmen:** Samsung QH55R, Tizen 4.0, profil `tv`, `secure_protocol` påslaget, sdbd `3.4.0_TV_REL`. *URL Launcher* har bara fältet *Install Web App* (ingen vanlig webbadress).
+
+**Vad som gav fel**
+- Osignerat paket via *Install Web App*: "Unable to install".
+- Samsung-utvecklarcertifikat (`VD DEVELOPER Public CA`, nivå Public) med skärmens rätta enhets-ID, via *Install Web App*: "Unable to install".
+- Samma paket via developer mode (`sdb`/`tz install`): `install failed[118012]` (vid ca 23 %, alltså vid kontrollen av signaturen).
+- Ett paket som Tizens eget verktyg (`tz pack`) signerat med samma profil ger **samma 118012**. Det utesluter vår egen signerare (`build/tizen_sign.py`) som orsak.
+- Kontrollerat och utanför misstanke: skärmens enhets-ID (`sdb shell 0 getduid`) är lika med ID:t i certifikatet, klockan var rätt, och "permit to install" (att lägga `device-profile.xml` i skärmens `/home/owner/share/tmp/sdk_tools/`, som tillägget gör) gjordes.
+
+**Hur man kopplar upp (fungerar)**
+1. Skärmen i developer mode, *Remote*, med Macens IP. Skärmen och Macen på samma nät (iPhonens delade nät fungerade; KTH:s nät är ett annat).
+2. `~/.tizen-extension-platform/server/sdktools/data/tools/sdb connect <skärmens IP>`.
+3. Verktygen i VS Code-tillägget: `.../tools/sdb` och `.../tools/tizen-core/tz` (`tz pack -t wgt -s <profil> -b osignerat.wgt -o signerat.wgt`, `tz install -p paket.wgt -e <IP>:26101`). Anslutningen släpper ibland; koppla upp igen före varje kommando.
+
+**Min bästa gissning om orsaken (obekräftad)**
+Skärmens firmware är från ca 2019. Certifikaten som Samsung utfärdar nu kommer från nya certifikatutfärdare (skapade 2025) som skärmen troligen inte känner till, medan SmartSign Players paket är signerat med en äldre kedja (Tizen Developers CA och "Samsung Enterprise Distributor Public") som skärmen känner igen. Det är också möjligt att *Install Web App* och developer mode kräver Enterprise-nivå för signage.
+
+**Vägar vidare**
+- Fråga Samsung eller återförsäljaren om en Enterprise-signatur (eller omsignering av B2B-appar). Det är den hållbara vägen för flera skärmar.
+- Koppla en liten dator bakom skärmen (publicom på Linux eller PubLiKiosk på Android). Det kräver inget certifikat.
+- Uppdatera skärmens firmware om möjligt (kan göra att de nya certifikatutfärdarna godtas), vilket inte är provat.

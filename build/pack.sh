@@ -29,7 +29,8 @@ fi
 if [ -n "${SIGN_CERT_DIR:-}" ]; then
   # Signerat paket med build/tizen_sign.py (bara Python och openssl). Lösenorden till author.p12 och distributor.p12 frågas
   # efter i terminalen. SIGN_CERT_DIR är mappen med certifikaten (t ex ~/SamsungCertificate/PubLiPlaye).
-  python3 -I build/tizen_sign.py sign dist/stage dist/PubLiPlayer.wgt "$SIGN_CERT_DIR"
+  # SIGN_DIST_DIR (valfri): mapp med en annan distributor.p12 än den i SIGN_CERT_DIR
+  python3 -I build/tizen_sign.py sign dist/stage dist/PubLiPlayer.wgt "$SIGN_CERT_DIR" ${SIGN_DIST_DIR:+"$SIGN_DIST_DIR"}
 elif [ -n "${SIGN_PROFILE:-}" ]; then
   # Signerat paket med Tizen-kommandoraden (kräver Tizen Studio och en certifikatprofil, se docs/signering.md). Oprovat.
   command -v tizen >/dev/null || { echo "tizen hittas inte i PATH (Tizen Studio: tools/ide/bin)" >&2; exit 1; }

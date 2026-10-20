@@ -7,7 +7,7 @@ plus en referens till egenskapsobjektet #prop. Implementationen är kontrollerad
 `verify` räknar om alla sidhash och verifierar signaturvärdena mot certifikaten i filerna.
 
   python3 build/tizen_sign.py verify <paketmapp eller .wgt>
-  python3 build/tizen_sign.py sign <paketmapp> <ut.wgt> <certmapp med author.p12 och distributor.p12>
+  python3 build/tizen_sign.py sign <paketmapp> <ut.wgt> <certmapp med author.p12 och distributor.p12> [<mapp med distributor.p12>]
 
 Lösenorden till .p12-filerna frågas efter i terminalen (getpass), eller läses ur miljövariablerna
 PUBLIPLAYER_AUTHOR_PASS och PUBLIPLAYER_DISTRIBUTOR_PASS (bara för tester). De skrivs aldrig ut eller sparas.
@@ -216,12 +216,12 @@ def ask(name, env_name):
     return getpass.getpass('Lösenord till %s: ' % name)
 
 
-def sign_package(pkg_dir, out_wgt, cert_dir):
+def sign_package(pkg_dir, out_wgt, cert_dir, dist_dir=None):
     files = read_package(pkg_dir)
     for n in SIGNATURE_FILES:
         files.pop(n, None)
     author_key, author_certs = p12_material(os.path.join(cert_dir, 'author.p12'), ask('author.p12', 'PUBLIPLAYER_AUTHOR_PASS'))
-    dist_key, dist_certs = p12_material(os.path.join(cert_dir, 'distributor.p12'), ask('distributor.p12', 'PUBLIPLAYER_DISTRIBUTOR_PASS'))
+    dist_key, dist_certs = p12_material(os.path.join(dist_dir or cert_dir, 'distributor.p12'), ask('distributor.p12', 'PUBLIPLAYER_DISTRIBUTOR_PASS'))
     digests = sorted((quote(n, safe=''), sha256_b64(data)) for n, data in files.items())
     author_xml = build_signature('author', digests, author_certs, make_signer(author_key))
     files['author-signature.xml'] = author_xml.encode('utf-8')
@@ -239,8 +239,8 @@ def sign_package(pkg_dir, out_wgt, cert_dir):
 if __name__ == '__main__':
     if len(sys.argv) >= 3 and sys.argv[1] == 'verify':
         sys.exit(0 if verify_package(sys.argv[2]) else 1)
-    if len(sys.argv) == 5 and sys.argv[1] == 'sign':
-        ok = sign_package(sys.argv[2], sys.argv[3], sys.argv[4])
+    if len(sys.argv) in (5, 6) and sys.argv[1] == 'sign':
+        ok = sign_package(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) == 6 else None)
         print('signerat:', sys.argv[3], '(egenkontroll %s)' % ('OK' if ok else 'FEL'))
         sys.exit(0 if ok else 1)
     print(__doc__)
