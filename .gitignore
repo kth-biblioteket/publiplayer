@@ -4,3 +4,6 @@ node_modules/
 *.p12
 *.pwd
 *.env
+Debug/
+.tizen-rds/
+tizen_web_project.yaml

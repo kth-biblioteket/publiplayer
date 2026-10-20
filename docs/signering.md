@@ -74,26 +74,21 @@ Kontrollera att `<size>` i `sssp_config.xml` är exakt filens storlek i byte (`w
 
 ## Resultat av proven på skärmen QH55R (Tizen 4.0, signage), 20 oktober 2026
 
-Det här är vad som provades och vad det visade. Slutsatserna om orsaken är **inte bevisade**.
-
 **Skärmen:** Samsung QH55R, Tizen 4.0, profil `tv`, `secure_protocol` påslaget, sdbd `3.4.0_TV_REL`. *URL Launcher* har bara fältet *Install Web App* (ingen vanlig webbadress).
 
-**Vad som gav fel**
-- Osignerat paket via *Install Web App*: "Unable to install".
-- Samsung-utvecklarcertifikat (`VD DEVELOPER Public CA`, nivå Public) med skärmens rätta enhets-ID, via *Install Web App*: "Unable to install".
-- Samma paket via developer mode (`sdb`/`tz install`): `install failed[118012]` (vid ca 23 %, alltså vid kontrollen av signaturen).
-- Ett paket som Tizens eget verktyg (`tz pack`) signerat med samma profil ger **samma 118012**. Det utesluter vår egen signerare (`build/tizen_sign.py`) som orsak.
-- Kontrollerat och utanför misstanke: skärmens enhets-ID (`sdb shell 0 getduid`) är lika med ID:t i certifikatet, klockan var rätt, och "permit to install" (att lägga `device-profile.xml` i skärmens `/home/owner/share/tmp/sdk_tools/`, som tillägget gör) gjordes.
+### Orsaken till "Unable to install" och `install failed[118012]`
+**`widget id` i `config.xml` måste vara samma som `tizen:application id`.** Vår `config.xml` hade `id="http://lib.kth.se/publiplayer"` på `<widget>` men `PubLiPlay0.PubLiPlayer` på `<tizen:application>`. Med den skillnaden avvisade skärmen paketet direkt (vid ca 23 %, när det kontrolleras) med 118012, oavsett certifikat. När `widget id` sattes till `PubLiPlay0.PubLiPlayer` installerades samma paket, signerat med samma certifikat och tillståndssteg. Det upptäcktes för att VS Code-tillägget skrev om `widget id` när Thomas byggde där. (SmartSign Players paket har olika id:n, men det är ett Enterprise-signerat paket.)
 
-**Hur man kopplar upp (fungerar)**
-1. Skärmen i developer mode, *Remote*, med Macens IP. Skärmen och Macen på samma nät (iPhonens delade nät fungerade; KTH:s nät är ett annat).
-2. `~/.tizen-extension-platform/server/sdktools/data/tools/sdb connect <skärmens IP>`.
-3. Verktygen i VS Code-tillägget: `.../tools/sdb` och `.../tools/tizen-core/tz` (`tz pack -t wgt -s <profil> -b osignerat.wgt -o signerat.wgt`, `tz install -p paket.wgt -e <IP>:26101`). Anslutningen släpper ibland; koppla upp igen före varje kommando.
+Det är **inte** orsaken: vår egen signerare (`build/tizen_sign.py`; ett paket signerat av Tizens `tz pack` gav samma fel), skärmens klocka, enhets-ID:t (skärmens `getduid` är lika med certifikatets) eller att skärmen skulle vara för gammal för Samsungs nya certifikatutfärdare (den gissningen var fel). Det är också oklart om det räckte att rätta `widget id` ensamt för *Install Web App*; det är inte provat med den vägen än.
 
-**Min bästa gissning om orsaken (obekräftad)**
-Skärmens firmware är från ca 2019. Certifikaten som Samsung utfärdar nu kommer från nya certifikatutfärdare (skapade 2025) som skärmen troligen inte känner till, medan SmartSign Players paket är signerat med en äldre kedja (Tizen Developers CA och "Samsung Enterprise Distributor Public") som skärmen känner igen. Det är också möjligt att *Install Web App* och developer mode kräver Enterprise-nivå för signage.
+### Så installerar du via developer mode (fungerar)
+1. Skärmen i developer mode, *Remote*, med Macens IP. Skärmen och Macen på samma nät (iPhonens delade nät fungerade).
+2. `~/.tizen-extension-platform/server/sdktools/data/tools/sdb connect <skärmens IP>`. Anslutningen släpper ibland; koppla upp igen före varje kommando.
+3. Permit: `sdb -s <IP>:26101 push ~/SamsungCertificate/<profil>/device-profile.xml /home/owner/share/tmp/sdk_tools/device-profile.xml` (inte `/home/developer`, dit får man inte skriva).
+4. Bygg och signera: `PUBLICOM_URL=https://apps-ref.lib.kth.se/publicomtools SIGN_PROFILE=<profil> sh build/pack.sh` (använder `tz pack`; lösenorden ligger i profilen som tillägget skapade).
+5. Installera: `.../tizen-core/tz install -p dist/PubLiPlayer.wgt -e <IP>:26101`. Appens id på skärmen blir paketet plus **filnamnet** på `.wgt` (`PubLiPlay0.PubLiPlayer`), så filen ska heta `PubLiPlayer.wgt`.
+6. Starta: `sdb -s <IP>:26101 shell 0 execute PubLiPlay0.PubLiPlayer`. Avinstallera: `sdb ... shell 0 vd_appuninstall PubLiPlay0.PubLiPlayer`.
 
-**Vägar vidare**
-- Fråga Samsung eller återförsäljaren om en Enterprise-signatur (eller omsignering av B2B-appar). Det är den hållbara vägen för flera skärmar.
-- Koppla en liten dator bakom skärmen (publicom på Linux eller PubLiKiosk på Android). Det kräver inget certifikat.
-- Uppdatera skärmens firmware om möjligt (kan göra att de nya certifikatutfärdarna godtas), vilket inte är provat.
+### Begränsningar som gäller
+- Ett utvecklarcertifikat är bundet till skärmens enhets-ID (högst 50 per certifikat), gäller i ett år, och ny skärm betyder nytt certifikat. För många skärmar behövs en Enterprise-signatur från Samsung.
+- VS Code-tillägget packar hela projektmappen (inklusive `.git`) i sitt eget bygge (`Debug/`). Använd `build/pack.sh` för paket som ska delas.
