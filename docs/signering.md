@@ -72,6 +72,8 @@ Kontrollera att `<size>` i `sssp_config.xml` är exakt filens storlek i byte (`w
 - Tizen: *Application Signing and Certificates* (docs.tizen.org/application/web/tutorials/sign-certificate)
 - signageOS: debugguide för Samsung Tizen (developer mode via URL Launcher Settings)
 
+> **Uppdatering:** developer mode behövs **inte** för att installera eller köra appen. Paketet signerat med utvecklarcertifikatet installerades via *Install Web App* med developer mode av, och appen startar själv efter omstart. Se [ny-skarm.md](ny-skarm.md) för den provade vägen. Avsnitten nedan beskriver felsökningen; påståenden om att developer mode eller en Enterprise-signatur skulle krävas gällde en tidigare gissning.
+
 ## Resultat av proven på skärmen QH55R (Tizen 4.0, signage), 20 oktober 2026
 
 **Skärmen:** Samsung QH55R, Tizen 4.0, profil `tv`, `secure_protocol` påslaget, sdbd `3.4.0_TV_REL`. *URL Launcher* har bara fältet *Install Web App* (ingen vanlig webbadress).

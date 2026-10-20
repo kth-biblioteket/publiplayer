@@ -23,7 +23,7 @@ Klienten för Samsung Tizen-skyltskärmar (Tizen 4.0 och nyare) som styrs från 
 
 Koden är skriven för Chromium 56 (Tizen 4.0): vanliga skript, ingen bundler, inga moduler, ingen `async`/`await`.
 
-Film på skärmen och IPv6: se [docs/video-och-ipv6.md](docs/video-och-ipv6.md). Signering och installation: [docs/signering.md](docs/signering.md). Felsökningsverktyg mot en körande app: `tools/` (webbinspektören via `sdb`).
+Ny skärm: [docs/ny-skarm.md](docs/ny-skarm.md) (checklista, provad på en QH55R). Film på skärmen och IPv6: se [docs/video-och-ipv6.md](docs/video-och-ipv6.md). Signering och installation: [docs/signering.md](docs/signering.md). Felsökningsverktyg mot en körande app: `tools/` (webbinspektören via `sdb`).
 
 ## Prova
 
