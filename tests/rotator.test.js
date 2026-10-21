@@ -19,6 +19,7 @@ function setTimeoutV(fn, ms) { const id = ++seq; timers.set(id, { at: now + (ms 
 function clearTimeoutV(id) { timers.delete(id); }
 
 const swaps = [];
+const els = [];
 function mkEl(id) {
   const attrs = {}; const listeners = {};
   return {
@@ -29,7 +30,7 @@ function mkEl(id) {
     getAttribute(k) { return attrs[k] === undefined ? null : attrs[k]; },
     set src(v) { attrs.src = v; if (v !== 'about:blank') setTimeoutV(() => listeners.load && listeners.load(), 300); },
     get src() { return attrs.src; },
-    contentWindow: { postMessage(msg) { swaps.push({ t: now / 1000, id, msg, url: attrs.src }); } },
+    contentWindow: { postMessage(msg) { swaps.push({ t: now / 1000, id, msg, url: attrs.src, vis: els.map((e) => e.style.visibility) }); } },
   };
 }
 
@@ -47,7 +48,8 @@ sandbox.PP = { schedule: sched };
 vm.runInContext(fs.readFileSync(rotatorPath, 'utf8'), sandbox);
 
 const ui = { error() {}, black() {} };
-const r = new sandbox.PP.Rotator(mkEl('frame-a'), mkEl('frame-b'), ui);
+els.push(mkEl('frame-a'), mkEl('frame-b'));
+const r = new sandbox.PP.Rotator(els[0], els[1], ui);
 const pages = sched.parsePages('https://x.test/a|13\nhttps://x.test/b|11', 30, null);
 r.configure({ defaultList: pages, schedule: null, scripts: true, onLoaded() {} });
 
@@ -71,6 +73,12 @@ async function flush() { for (let i = 0; i < 20; i++) await Promise.resolve(); }
   shown.forEach((d, n) => {
     const want = n % 2 === 0 ? 13 : 11;
     assert.ok(Math.abs(d - want) <= 0.5, 'byte ' + (n + 1) + ': visad ' + d.toFixed(1) + ' s, väntat ' + want + ' s');
+  });
+  // Bara den aktiva ramen ritas: en film får inte ha en synlig ram under sig (Tizens videoplan gör hål i webblagret)
+  swaps.forEach((s) => {
+    const active = s.id === 'frame-a' ? 0 : 1;
+    assert.deepStrictEqual(s.vis[active], 'visible', 'aktiv ram dold vid byte ' + s.t);
+    assert.deepStrictEqual(s.vis[1 - active], 'hidden', 'förladdningsramen syns vid byte ' + s.t);
   });
   console.log('rotator: ok');
 })();
