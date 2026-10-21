@@ -12,7 +12,7 @@ const sched = require(path.join(root, 'js/schedule.js'));
 const source = fs.readFileSync(path.join(root, 'js/rotator.js'), 'utf8');
 
 /** pagesSpec: "url|sekunder\n...", loadSeconds: laddtid per sida i ordning. */
-async function run(pagesSpec, total, loadSeconds, failFirst) {
+async function run(pagesSpec, total, loadSeconds, failFirst, filmLatencyMs) {
   let now = 0, seq = 0;
   const timers = new Map();
   const RealDate = Date;
@@ -33,7 +33,7 @@ async function run(pagesSpec, total, loadSeconds, failFirst) {
     const v = { style: {}, muted: false, loop: false, paused: true, error: null, _src: '', _t0: 0 };
     Object.defineProperty(v, 'currentTime', { get() { return v._src ? Math.max(0, (now - v._t0) / 1000) : 0; } });
     Object.defineProperty(v, 'currentSrc', { get() { return v._src; } });
-    Object.defineProperty(v, 'src', { set(x) { v._src = x; v._t0 = now + 550; filmLog.push({ t: now / 1000, src: x }); if (els.some((e) => e.filmLoaded && e.style.visibility !== 'hidden')) violations.push(now / 1000); }, get() { return v._src; } });
+    Object.defineProperty(v, 'src', { set(x) { v._src = x; v._t0 = now + (filmLatencyMs || 550); filmLog.push({ t: now / 1000, src: x }); if (els.some((e) => e.filmLoaded && e.style.visibility !== 'hidden')) violations.push(now / 1000); }, get() { return v._src; } });
     v.play = () => { v.paused = false; return Promise.resolve(); };
     v.pause = () => { v.paused = true; };
     v.removeAttribute = (k) => { if (k === 'src') { v._src = ''; filmLog.push({ t: now / 1000, src: null }); } };
@@ -76,7 +76,13 @@ async function run(pagesSpec, total, loadSeconds, failFirst) {
   vm.runInContext(source, sandbox);
   const proto = sandbox.PP.Rotator.prototype, raise = proto.raise, scheduleNext = proto.scheduleNext;
   let lastIndex = 0;
-  proto.raise = function () { raise.call(this); if (now > 0) swaps.push({ t: now / 1000, id: els[this.active].id, vis: els.map((e) => e.style.visibility) }); };
+  proto.raise = function (cross) {
+    raise.call(this, cross);
+    if (now <= 0) return;
+    const s = { t: now / 1000, id: els[this.active].id, vis: els.map((e) => e.style.visibility), cross: !!cross, transition: els[this.active].style.transition };
+    swaps.push(s);
+    setTimeoutV(() => { s.visLater = els.map((e) => e.style.visibility); }, 500); // efter övertoningen
+  };
   proto.scheduleNext = function () {
     if (now > 0 && this.index !== lastIndex) { changes.push({ t: now / 1000, index: this.index }); lastIndex = this.index; }
     return scheduleNext.call(this);
@@ -113,7 +119,8 @@ async function run(pagesSpec, total, loadSeconds, failFirst) {
   res.swaps.forEach((s) => {
     const active = s.id === 'frame-a' ? 0 : 1;
     assert.strictEqual(s.vis[active], 'visible', 'aktiv ram dold vid byte ' + s.t);
-    assert.strictEqual(s.vis[1 - active], 'hidden', 'förladdningsramen syns vid byte ' + s.t);
+    assert.ok(s.cross && /opacity/.test(s.transition), 'ingen övertoning vid byte ' + s.t);
+    if (s.visLater) assert.strictEqual(s.visLater[1 - active], 'hidden', 'gamla ramen syns efter övertoningen vid byte ' + s.t);
   });
   assert.strictEqual(res.fades.filter((f) => f.on).length, 0, 'ingen ton utan film');
   assert.strictEqual(res.filmLog.filter((e) => e.src).length, 0, 'ingen film ska spelas');
@@ -137,9 +144,9 @@ async function run(pagesSpec, total, loadSeconds, failFirst) {
       assert.ok(off && off.t - e.t <= 3, 'tonen togs inte bort inom 3 s efter ' + e.t.toFixed(1));
     } else {
       assert.strictEqual(fadeNear.length, 0, 'ton vid film efter bild vid ' + e.t.toFixed(1) + ' s');
-      // filmen ska ha startats under bilden en kort stund före bytet till den (sidbytet kommer inom 2 s efter filmstarten)
+      // filmen ska ha startats under bilden en kort stund före bytet till den (sidbytet kommer inom 4,5 s efter filmstarten)
       const ch = res.changes.find((c) => c.t >= e.t - 0.001);
-      assert.ok(ch && ch.t - e.t <= 2, 'film efter bild startades inte under bilden vid ' + e.t.toFixed(1) + ' s');
+      assert.ok(ch && ch.t - e.t <= 4.5, 'film efter bild startades inte under bilden vid ' + e.t.toFixed(1) + ' s');
     }
   });
   // ingen sida visas kortare än inställt (längre bara med bytet: ca 1,2 s)
@@ -161,5 +168,12 @@ async function run(pagesSpec, total, loadSeconds, failFirst) {
   assert.deepStrictEqual(res.violations, [], 'film startad medan en annan video syntes (hämtning misslyckades): ' + res.violations.join(', '));
   assert.ok(res.frameFilms.length <= 1, 'fler än första filmen i en ram: ' + JSON.stringify(res.frameFilms));
   assert.ok(res.filmLog.filter((e) => e.src).length >= 4, 'filmerna kändes inte igen efter ett misslyckat svar');
+
+  // 5: filmen under bilden startar långsamt (3,5 s): spelaren väntar på den i stället för att tona (bild till film klipper)
+  res = await run('https://x.test/api/sign/m/film1|13\nhttps://x.test/api/sign/m/film2|11\nhttps://x.test/api/sign/m/bild|5', 130, [2, 2, 1], false, 3500);
+  const slow = res.filmLog.filter((e) => e.src);
+  slow.slice(1).forEach((e, k) => {
+    if ((k + 1) % 2 === 0) assert.strictEqual(res.fades.filter((f) => f.on && f.t >= e.t - 1 && f.t <= e.t + 6).length, 0, 'ton vid film efter bild trots långsam start vid ' + e.t.toFixed(1) + ' s');
+  });
   console.log('rotator: ok');
 })();
