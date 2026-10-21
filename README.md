@@ -29,6 +29,7 @@ Ny skärm: [docs/ny-skarm.md](docs/ny-skarm.md) (checklista, provad på en QH55R
 
 ```
 node tests/schedule.test.js        # schemalogiken
+node tests/rotator.test.js         # rotationens tider (virtuell klocka): varje sida visas sin inställda tid
 # tests/poll.html (via servern nedan, http://127.0.0.1:8000/tests/poll.html): omhämtningen av inställningar med en låtsasserver; titeln blir "poll OK"
 python3 -m http.server 8000        # klienten i en vanlig webbläsare, http://127.0.0.1:8000
 ```
