@@ -16,6 +16,7 @@ Resultat 20 oktober 2026: ett paket signerat med ett Samsung-utvecklarcertifikat
 
 ## 2. Paketet
 - `config.xml`: `widget id` ska vara **samma** som `tizen:application id` (`PubLiPlay0.PubLiPlayer`), annars avvisas paketet med `install failed[118012]`.
+- **Ett paket per server:** adressen byggs in och är ifylld (dold) i inskrivningen, så skärmen frågar bara efter koden. Bygg ett för produktion (`PUBLICOM_URL=https://apps.lib.kth.se/publicomtools`) och ett för ref (`https://apps-ref.lib.kth.se/publicomtools`) och lägg dem i respektive servers `player-install`.
 - Bygg och signera: `PUBLICOM_URL=https://<server>/publicomtools SIGN_PROFILE=<profil> sh build/pack.sh` (Tizens `tz pack` från VS Code-tillägget). Filen **ska heta `PubLiPlayer.wgt`** (namnet blir appens id på skärmen). `PUBLICOM_URL` bakar in standardadressen till publicomtools.
 - Lägg `dist/PubLiPlayer.wgt` och `dist/sssp_config.xml` (storleken i byte ska stämma) direkt i en mapp på en https-adress utan omdirigering och utan inloggning (hos oss `…/publicomtools/player-install/`).
 
