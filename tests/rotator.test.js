@@ -12,7 +12,7 @@ const sched = require(path.join(root, 'js/schedule.js'));
 const source = fs.readFileSync(path.join(root, 'js/rotator.js'), 'utf8');
 
 /** pagesSpec: "url|sekunder\n...", loadSeconds: laddtid per sida i ordning. */
-async function run(pagesSpec, total, loadSeconds, failFirst, filmLatencyMs) {
+async function run(pagesSpec, total, loadSeconds, failFirst, filmLatencyMs, cfgExtra) {
   let now = 0, seq = 0;
   const timers = new Map();
   const RealDate = Date;
@@ -23,7 +23,7 @@ async function run(pagesSpec, total, loadSeconds, failFirst, filmLatencyMs) {
   const setTimeoutV = (fn, ms) => { const id = ++seq; timers.set(id, { at: now + (ms || 0), fn, id }); return id; };
   const clearTimeoutV = (id) => { timers.delete(id); };
 
-  const swaps = [], els = [], fades = [], changes = [], filmLog = [], frameFilms = [], violations = [], fetched = {};
+  const swaps = [], els = [], fades = [], changes = [], filmLog = [], frameFilms = [], violations = [], fetched = {}, activeReloads = [];
   const pages = sched.parsePages(pagesSpec, 30, null);
   const delayOf = (url) => (loadSeconds[pages.findIndex((p) => p.url === url)] || 0.3) * 1000;
   const isFilm = (url) => /film/.test(url || '');
@@ -50,6 +50,7 @@ async function run(pagesSpec, total, loadSeconds, failFirst, filmLatencyMs) {
       removeAttribute(k) { delete attrs[k]; },
       getAttribute(k) { return attrs[k] === undefined ? null : attrs[k]; },
       set src(v) {
+        if (now > 1000 && v !== 'about:blank' && el.style.zIndex === 2 && el.style.visibility === 'visible') activeReloads.push(now / 1000);
         attrs.src = v; el.filmLoaded = false;
         if (v === 'about:blank') return;
         if (isFilm(v)) frameFilms.push({ t: now / 1000, url: v });
@@ -90,7 +91,7 @@ async function run(pagesSpec, total, loadSeconds, failFirst, filmLatencyMs) {
 
   els.push(mkEl('frame-a'), mkEl('frame-b'));
   const r = new sandbox.PP.Rotator(els[0], els[1], { error() {}, black() {}, fade(on) { fades.push({ t: now / 1000, on }); } }, film);
-  r.configure({ defaultList: pages, schedule: null, scripts: true, onLoaded() {} });
+  r.configure(Object.assign({ defaultList: pages, schedule: null, scripts: true, onLoaded() {} }, cfgExtra || {}));
 
   const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
   r.start();
@@ -105,7 +106,7 @@ async function run(pagesSpec, total, loadSeconds, failFirst, filmLatencyMs) {
   }
   let prev = 0;
   const shown = swaps.map((s) => { const d = s.t - prev; prev = s.t; return d; });
-  return { swaps, shown, fades, changes, filmLog, frameFilms, violations };
+  return { swaps, shown, fades, changes, filmLog, frameFilms, violations, activeReloads };
 }
 
 (async () => {
@@ -175,5 +176,20 @@ async function run(pagesSpec, total, loadSeconds, failFirst, filmLatencyMs) {
   slow.slice(1).forEach((e, k) => {
     if ((k + 1) % 2 === 0) assert.strictEqual(res.fades.filter((f) => f.on && f.t >= e.t - 1 && f.t <= e.t + 6).length, 0, 'ton vid film efter bild trots långsam start vid ' + e.t.toFixed(1) + ' s');
   });
+
+  // 6: SIGN_RELOAD, en ensam sida: mjuk omladdning (dolda ramen, byts in när den är klar), aldrig i den synliga ramen
+  res = await run('https://x.test/a|30', 200, [], false, 0, { reloadMs: 60000 });
+  assert.ok(res.swaps.length >= 3, 'ensam sida laddades inte om: ' + res.swaps.length + ' byten på 200 s (1 min)');
+  assert.deepStrictEqual(res.activeReloads, [], 'sidan laddades om i den synliga ramen vid ' + res.activeReloads.join(', '));
+  res.swaps.forEach((s, n) => { if (n > 0) assert.notStrictEqual(s.id, res.swaps[n - 1].id, 'omladdningen bytte inte ram'); });
+  assert.ok(Math.abs(res.swaps[0].t - 60.5) <= 1.5, 'första omladdningen efter ' + res.swaps[0].t + ' s, väntat ca 60 s');
+  res = await run('https://x.test/a|30', 200, [], false, 0, { reloadMs: 0 });
+  assert.strictEqual(res.swaps.length, 0, 'omladdning trots 0 (aldrig)');
+  res = await run('https://x.test/a|30\nhttps://x.test/b|30', 200, [], false, 0, { reloadMs: 60000 });
+  assert.ok(res.swaps.length > 0 && res.swaps.every((s, n) => n === 0 || s.t - res.swaps[n - 1].t >= 29), 'två sidor: omladdning ska inte ske, bara rotation');
+  // en ensam film: ingen omladdning (den loopar i <video id=film>), filmadressen oförändrad
+  res = await run('https://x.test/api/sign/m/film1|30', 200, [], false, 0, { reloadMs: 60000 });
+  assert.strictEqual(res.filmLog.filter((e) => e.src).length, 1, 'ensam film startades om: ' + res.filmLog.filter((e) => e.src).length);
+  assert.strictEqual(res.fades.filter((f) => f.on).length, 0, 'ton vid ensam film utan ändrad adress');
   console.log('rotator: ok');
 })();

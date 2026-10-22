@@ -54,6 +54,17 @@
       "help": "Hur länge en sida visas när den inte har egna sekunder (5–3600)."
     },
     {
+      "key": "SIGN_RELOAD",
+      "label": "Ladda om en ensam sida efter",
+      "group": "skylt",
+      "type": "int",
+      "unit": "minuter",
+      "default": "10",
+      "min": 0,
+      "max": 1440,
+      "help": "Minuter. Bara när listan har en enda sida (en Sida som bild får då en ny bild). 0: aldrig."
+    },
+    {
       "key": "SIGN_JS",
       "label": "Sidorna får köra JavaScript",
       "group": "skylt",
